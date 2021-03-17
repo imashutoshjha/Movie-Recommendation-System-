@@ -1,0 +1,91 @@
+import pandas as pd
+import numpy as np
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.impute import SimpleImputer
+
+def get_title_from_index(index):
+	return df[df.index == index]["title"].values[0]
+
+def get_index_from_title(title):
+	return df[df.title == title]["index"].values[0]
+
+##Step 1: Read CSV File
+X=pd.read_csv('movie_dataset.csv')
+
+##Step 2: Select Features
+# features=['keywords','cast','genres','director']
+# imputer=SimpleImputer(strategy='constant',fill_value=" ")
+# imputer=imputer.fit(X)
+# X=imputer.transform(X)
+X.fillna(" ", inplace=True)  //it cleans the data,where the feature is containing NaN,it puts " ",so that we can add the whole attributes
+//into one string.
+
+##clean the columns that is in features otherwise you wont add the features to string
+
+
+#Step 3: Create a column in DF which combines all selected features and returns a string
+def combine_features(row):
+  return row["keywords"]+" "+row["cast"]+" "+row["genres"]+" "+row["director"]
+
+X["combined_features"]=X.apply(combine_features,axis=1)  //to combine the features/attricbutes of each rows(axis=1) in one string.
+X["combined_features"].head(n=5)   //To print combined features string    
+
+## we collected all the features,made a string for each row and put in the new column of our dataset 'combined_features'
+
+##Step 4: Create count matrix from this new combined column
+cv=CountVectorizer()    //Making object of CountVectorizer which will help to count the frequency of all the words in it.
+count_matrix=cv.fit_transform(X["combined_features"])    //Find cosine similarity for all rows(that we already made a string)
+print count_matrix.toarray()
+//count_matrix is like : [[2 1]
+                          [1 2]]
+//in first row,2 is the count of some word and and in second row,1 is the count of the the same word.
+##Step 5: Compute the Cosine Similarity based on the count_matrix
+cosine_sim=cosine_similarity(count_matrix)
+movie_user_likes = "Men in Black"
+
+//Cosine_sim matrix like: [[1,0.8,.....]
+//                         [0.8 1,....]]
+//in first row,oth index element ie. 1 is the similarity with the 1st element in dataset element and and in second row,Oth element ie. 0.8 is 
+//similarity with 0th element i.e first 
+## Step 6: Get index of this movie from its title
+movie_index=get_index_from_title(movie_user_likes)   //gets the index of the movie from our dataset
+similar_movies=list(enumerate(cosine_sim[movie_index])) //got the row of user's fav. movie index row and that row contains
+//the similarity with every movie.In that row 0th index element show the similarity with 0th index movie of dataset and same for  
+//all movie of the dataset.we store them in a list with enumerate eg.[[index_in_the_row,cosine_similarity],[..same like prev.]]
+
+## Step 7: Get a list of similar movies in descending order of similarity score
+sorted_similar_movies=sorted(similar_movies,key=lambda x:x[1],reverse=True)  //sort the above enumerated list on the basis of
+//the cosine_similarity so that most similar movie come in front or oth index and we get the index of movie which is most similar.
+
+
+## Step 8: Print titles of first 50 movies
+i=0;
+for movie in sorted_similar_movies:
+  print(get_title_from_index(movie[0]))   //get title of movie and print the first 50 most similar movie.
+  i=i+1;
+  if(i>50):
+     break
+
+
+    NOTES:
+    Cosine similarity is a metric used to measure how similar the documents are irrespective of their size.
+    it considers obejects or documents as a vector projected in multidimensional space.
+    It is advantageous for text or document similarity because even two similarr documents are far apart by euclidean distance(due to size of document)
+    ,chances are they may still be oriented closer together.
+    The smaller the angle,the closer the similarity.
+    cosine similarity formula: cos(x,y)=(x.y)/(|x|*|y|)  numerator is dot product and denominator is magnitude.
+    magnitude is =sqrt(a^2+b^2 + c^2) where a,b,c is the element of vector x.
+
+    Types of distance:
+    1.Euclidean distance
+    2.Manhattan distance
+    3.Jaccard Similarity
+    4.Minkowski distance
+    5.Cosing Similarity
+
+    Recommendation System Types:
+    1.Views based eg.Trending section of youtube
+    2.Content based eg. amazon,facebook,facebook just you liked a product,you gets suggestions of similar products,our project is also an example
+    3.Collabarative filtering : If two user have Liked the same product then one product liked product is suggested to other and 
+    vice versa
